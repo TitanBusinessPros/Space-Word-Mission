@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spaceship Mission - Word Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #2a1f3a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 20px;
+        }
+
+        .stars {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .difficulty-select {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-btn {
+            padding: 12px 30px;
+            border: 2px solid #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .difficulty-btn:hover {
+            background: rgba(0, 212, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .difficulty-btn.active {
+            background: #00d4ff;
+            color: #0a0e27;
+            font-weight: bold;
+        }
+
+        .game-area {
+            display: none;
+        }
+
+        .game-area.active {
+            display: block;
+        }
+
+        .spaceship-canvas {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            margin: 20px auto;
+            display: block;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .word-display {
+            text-align: center;
+            font-size: 3em;
+            letter-spacing: 15px;
+            margin: 30px 0;
+            font-weight: bold;
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+            gap: 10px;
+            margin: 30px 0;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .key {
+            padding: 15px;
+            background: rgba(0, 212, 255, 0.2);
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .key:hover:not(.used):not(.correct):not(.wrong) {
+            background: rgba(0, 212, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .key.correct {
+            background: rgba(0, 255, 100, 0.3);
+            border-color: #00ff64;
+            color: #00ff64;
+        }
+
+        .key.wrong {
+            background: rgba(255, 50, 50, 0.3);
+            border-color: #ff3232;
+            color: #ff3232;
+        }
+
+        .key.used {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .message {
+            text-align: center;
+            font-size: 1.5em;
+            margin: 20px 0;
+            min-height: 40px;
+        }
+
+        .message.win {
+            color: #00ff64;
+            animation: pulse 0.5s;
+        }
+
+        .message.lose {
+            color: #ff3232;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .new-game-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 40px;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .new-game-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 212, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+    
+    <div class="game-container">
+        <h1>🚀 SPACESHIP MISSION 🚀</h1>
+        <p class="subtitle">Build your spaceship by guessing the word!</p>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-label">Wrong Guesses</div>
+                <div class="stat-value" id="wrongCount">0 / 7</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Win Streak</div>
+                <div class="stat-value" id="streakCount">0</div>
+            </div>
+        </div>
+
+        <div class="difficulty-select" id="difficultySelect">
+            <button class="difficulty-btn" data-difficulty="easy">Elementary</button>
+            <button class="difficulty-btn" data-difficulty="medium">Middle School</button>
+            <button class="difficulty-btn" data-difficulty="hard">Adult</button>
+        </div>
+
+        <div class="game-area" id="gameArea">
+            <canvas id="spaceshipCanvas" class="spaceship-canvas" width="400" height="300"></canvas>
+            
+            <div class="word-display" id="wordDisplay"></div>
+            
+            <div style="text-align: center; margin: 20px 0;">
+                <button class="difficulty-btn" id="hintBtn" style="background: rgba(255, 165, 0, 0.2); border-color: #ffa500; color: #ffa500;">
+                    💡 Use Hint (Category)
+                </button>
+            </div>
+            
+            <div id="hintDisplay" style="text-align: center; font-size: 1.3em; color: #ffa500; margin: 15px 0; min-height: 30px; font-weight: bold;"></div>
+            
+            <div class="keyboard" id="keyboard"></div>
+            
+            <div class="message" id="message"></div>
+            
+            <button class="new-game-btn" id="newGameBtn">New Game</button>
+        </div>
+    </div>
+
+    <script>
+        const wordBank = {
+            easy: [
+                {word: 'CAT', category: 'Animal'}, {word: 'DOG', category: 'Animal'}, {word: 'SUN', category: 'Nature'}, 
+                {word: 'MOON', category: 'Nature'}, {word: 'STAR', category: 'Nature'}, {word: 'FISH', category: 'Animal'}, 
+                {word: 'BIRD', category: 'Animal'}, {word: 'TREE', category: 'Nature'}, {word: 'BOOK', category: 'Object'}, 
+                {word: 'PLAY', category: 'Action'}, {word: 'JUMP', category: 'Action'}, {word: 'SWIM', category: 'Action'}, 
+                {word: 'BALL', category: 'Object'}, {word: 'CAKE', category: 'Food'}, {word: 'MILK', category: 'Food'}, 
+                {word: 'BEAR', category: 'Animal'}, {word: 'FROG', category: 'Animal'}, {word: 'LION', category: 'Animal'}, 
+                {word: 'BLUE', category: 'Color'}, {word: 'PINK', category: 'Color'}, {word: 'SNOW', category: 'Nature'}, 
+                {word: 'RAIN', category: 'Nature'}, {word: 'WIND', category: 'Nature'}, {word: 'FARM', category: 'Place'}, 
+                {word: 'BABY', category: 'Person'}, {word: 'SONG', category: 'Thing'}, {word: 'DUCK', category: 'Animal'}, 
+                {word: 'CORN', category: 'Food'}, {word: 'SOCK', category: 'Clothing'}, {word: 'SHOE', category: 'Clothing'},
+                {word: 'DOOR', category: 'Object'}, {word: 'BELL', category: 'Object'}, {word: 'GIFT', category: 'Object'}, 
+                {word: 'KING', category: 'Person'}, {word: 'NICE', category: 'Feeling'}, {word: 'GOOD', category: 'Feeling'}, 
+                {word: 'WARM', category: 'Feeling'}, {word: 'COLD', category: 'Feeling'}, {word: 'BOAT', category: 'Vehicle'}, 
+                {word: 'KITE', category: 'Toy'}, {word: 'LAMP', category: 'Object'}, {word: 'CHAIR', category: 'Furniture'}, 
+                {word: 'TABLE', category: 'Furniture'}, {word: 'HAPPY', category: 'Feeling'}, {word: 'SMILE', category: 'Action'}, 
+                {word: 'LAUGH', category: 'Action'}, {word: 'SLEEP', category: 'Action'}, {word: 'DREAM', category: 'Thing'}, 
+                {word: 'HOME', category: 'Place'}, {word: 'LOVE', category: 'Feeling'}
+            ],
+            medium: [
+                {word: 'PLANET', category: 'Space Object'}, {word: 'GALAXY', category: 'Space Object'}, {word: 'ROCKET', category: 'Vehicle'}, 
+                {word: 'SOCCER', category: 'Sport'}, {word: 'GUITAR', category: 'Musical Instrument'}, {word: 'CASTLE', category: 'Building'}, 
+                {word: 'DRAGON', category: 'Mythical Creature'}, {word: 'PUZZLE', category: 'Game'}, {word: 'JUNGLE', category: 'Place'}, 
+                {word: 'WINTER', category: 'Season'}, {word: 'SUMMER', category: 'Season'}, {word: 'SPRING', category: 'Season'}, 
+                {word: 'MUSEUM', category: 'Building'}, {word: 'SCIENCE', category: 'Subject'}, {word: 'HISTORY', category: 'Subject'}, 
+                {word: 'VOLCANO', category: 'Natural Formation'}, {word: 'RAINBOW', category: 'Natural Phenomenon'}, {word: 'THUNDER', category: 'Natural Phenomenon'}, 
+                {word: 'CRYSTAL', category: 'Mineral'}, {word: 'DOLPHIN', category: 'Animal'}, {word: 'PYRAMID', category: 'Structure'}, 
+                {word: 'TREASURE', category: 'Thing'}, {word: 'MYSTERY', category: 'Concept'}, {word: 'COURAGE', category: 'Quality'}, 
+                {word: 'JOURNEY', category: 'Activity'}, {word: 'FREEDOM', category: 'Concept'}, {word: 'BALANCE', category: 'Concept'}, 
+                {word: 'HARMONY', category: 'Concept'}, {word: 'CHAPTER', category: 'Book Part'}, {word: 'LIBRARY', category: 'Building'}, 
+                {word: 'COMPASS', category: 'Tool'}, {word: 'HORIZON', category: 'Natural Feature'}, {word: 'VILLAGE', category: 'Place'}, 
+                {word: 'HARVEST', category: 'Event'}, {word: 'MEADOW', category: 'Place'}, {word: 'CANYON', category: 'Natural Formation'}, 
+                {word: 'FOSSIL', category: 'Ancient Object'}, {word: 'GLACIER', category: 'Natural Formation'}, {word: 'SERPENT', category: 'Animal'}, 
+                {word: 'PHOENIX', category: 'Mythical Creature'}, {word: 'UNICORN', category: 'Mythical Creature'}, {word: 'WIZARD', category: 'Fantasy Character'}, 
+                {word: 'KINGDOM', category: 'Place'}, {word: 'KNIGHT', category: 'Person'}, {word: 'WARRIOR', category: 'Person'}, 
+                {word: 'PEGASUS', category: 'Mythical Creature'}, {word: 'CYCLONE', category: 'Weather Event'}, {word: 'ARCTIC', category: 'Region'}, 
+                {word: 'DESERT', category: 'Place'}
+            ],
+            hard: [
+                {word: 'ALGORITHM', category: 'Computer Science Term'}, {word: 'PHILOSOPHY', category: 'Academic Subject'}, {word: 'ENTREPRENEUR', category: 'Profession'}, 
+                {word: 'RENAISSANCE', category: 'Historical Period'}, {word: 'PARADOX', category: 'Concept'}, {word: 'CHRYSANTHEMUM', category: 'Flower'}, 
+                {word: 'KALEIDOSCOPE', category: 'Optical Device'}, {word: 'HYPOTHESIS', category: 'Scientific Term'}, {word: 'PSYCHOLOGY', category: 'Academic Subject'}, 
+                {word: 'ARCHAEOLOGY', category: 'Academic Subject'}, {word: 'CRYPTOGRAPHY', category: 'Technology Field'}, {word: 'METAPHYSICAL', category: 'Philosophy Term'}, 
+                {word: 'JUXTAPOSITION', category: 'Literary Device'}, {word: 'SYNCHRONICITY', category: 'Concept'}, {word: 'SERENDIPITY', category: 'Concept'}, 
+                {word: 'METAMORPHOSIS', category: 'Biological Process'}, {word: 'CONSCIOUSNESS', category: 'Psychological Concept'}, {word: 'INFRASTRUCTURE', category: 'System'}, 
+                {word: 'PERSEVERANCE', category: 'Quality'}, {word: 'REVOLUTIONARY', category: 'Adjective'}, {word: 'SOPHISTICATED', category: 'Adjective'}, 
+                {word: 'UNPRECEDENTED', category: 'Adjective'}, {word: 'PHILOSOPHICAL', category: 'Adjective'}, {word: 'QUINTESSENTIAL', category: 'Adjective'}, 
+                {word: 'ORCHESTRATION', category: 'Musical Term'}, {word: 'COMPREHENSIVE', category: 'Adjective'}, {word: 'EXPONENTIAL', category: 'Mathematical Term'}, 
+                {word: 'CONTEMPORARY', category: 'Adjective'}, {word: 'MAGNIFICENT', category: 'Adjective'}, {word: 'BUREAUCRACY', category: 'System'}, 
+                {word: 'HIEROGLYPHICS', category: 'Writing System'}, {word: 'PHARMACEUTICAL', category: 'Medical Term'}, {word: 'EQUILIBRIUM', category: 'Scientific Term'}, 
+                {word: 'CHROMOSOME', category: 'Biological Term'}, {word: 'PHOTOSYNTHESIS', category: 'Biological Process'}, {word: 'BIODIVERSITY', category: 'Environmental Term'}, 
+                {word: 'SUSTAINABILITY', category: 'Environmental Term'}, {word: 'THERMODYNAMICS', category: 'Physics Term'}, {word: 'ELECTROMAGNETIC', category: 'Physics Term'}, 
+                {word: 'EXTRATERRESTRIAL', category: 'Space Term'}, {word: 'TRANSCENDENTAL', category: 'Philosophy Term'}, {word: 'SUBCONSCIOUS', category: 'Psychological Term'}, 
+                {word: 'MULTINATIONAL', category: 'Business Term'}, {word: 'TECHNOLOGICAL', category: 'Adjective'}, {word: 'ASTRONOMICAL', category: 'Space Term'}, 
+                {word: 'INCOMPREHENSIBLE', category: 'Adjective'}, {word: 'ASYMMETRICAL', category: 'Geometric Term'}, {word: 'NEUROSCIENCE', category: 'Academic Subject'}
+            ]
+        };
+
+        let currentWord = '';
+        let currentCategory = '';
+        let guessedLetters = [];
+        let wrongGuesses = 0;
+        let maxWrong = 7;
+        let gameActive = false;
+        let difficulty = '';
+        let streak = 0;
+        let hintUsed = false;
+
+        const canvas = document.getElementById('spaceshipCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Create stars
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.width = star.style.height = Math.random() * 3 + 'px';
+            star.style.animationDelay = Math.random() * 3 + 's';
+            starsContainer.appendChild(star);
+        }
+
+        // Audio context for sound effects
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(frequency, duration, type = 'sine') {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playCorrectSound() {
+            playSound(800, 0.1);
+            setTimeout(() => playSound(1000, 0.1), 100);
+        }
+
+        function playWrongSound() {
+            playSound(200, 0.2, 'sawtooth');
+        }
+
+        function playVictorySound() {
+            playSound(523, 0.15);
+            setTimeout(() => playSound(659, 0.15), 150);
+            setTimeout(() => playSound(784, 0.15), 300);
+            setTimeout(() => playSound(1047, 0.3), 450);
+        }
+
+        function drawSpaceship() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate build progress based on correctly guessed letters
+            const totalLetters = new Set(currentWord.split('')).size;
+            const correctLetters = currentWord.split('').filter(letter => guessedLetters.includes(letter));
+            const uniqueCorrect = new Set(correctLetters).size;
+            const buildProgress = totalLetters > 0 ? (uniqueCorrect / totalLetters) * 7 : 0;
+            
+            // Draw mission failure elements (red danger indicators)
+            if (wrongGuesses > 0) {
+                ctx.fillStyle = '#ff3232';
+                ctx.globalAlpha = 0.3 + (wrongGuesses * 0.1);
+                for (let i = 0; i < wrongGuesses; i++) {
+                    ctx.fillRect(20 + i * 50, 20, 40, 10);
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            // Draw spaceship parts based on correct letter progress
+            ctx.strokeStyle = '#00d4ff';
+            ctx.fillStyle = '#00d4ff';
+            ctx.lineWidth = 3;
+
+            // Base - appears at ~14% progress
+            if (buildProgress >= 1) {
+                ctx.fillStyle = '#1a3a5a';
+                ctx.fillRect(150, 200, 100, 60);
+                ctx.strokeRect(150, 200, 100, 60);
+            }
+
+            // Main body - appears at ~28% progress
+            if (buildProgress >= 2) {
+                ctx.fillStyle = '#2a4a6a';
+                ctx.fillRect(160, 140, 80, 60);
+                ctx.strokeRect(160, 140, 80, 60);
+            }
+
+            // Cockpit - appears at ~42% progress
+            if (buildProgress >= 3) {
+                ctx.fillStyle = '#4a6a8a';
+                ctx.beginPath();
+                ctx.arc(200, 130, 30, Math.PI, 0);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Left wing - appears at ~57% progress
+            if (buildProgress >= 4) {
+                ctx.fillStyle = '#3a5a7a';
+                ctx.beginPath();
+                ctx.moveTo(160, 180);
+                ctx.lineTo(120, 220);
+                ctx.lineTo(160, 220);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Right wing - appears at ~71% progress
+            if (buildProgress >= 5) {
+                ctx.fillStyle = '#3a5a7a';
+                ctx.beginPath();
+                ctx.moveTo(240, 180);
+                ctx.lineTo(280, 220);
+                ctx.lineTo(240, 220);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Engine flames - appears at ~85% progress
+            if (buildProgress >= 6) {
+                ctx.fillStyle = '#ff6600';
+                ctx.beginPath();
+                ctx.moveTo(170, 260);
+                ctx.lineTo(180, 280);
+                ctx.lineTo(190, 260);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(210, 260);
+                ctx.lineTo(220, 280);
+                ctx.lineTo(230, 260);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Stars/decorations on ship - appears at 100% (game won)
+            if (buildProgress >= 7) {
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(200, 170, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw "MISSION FAILED" if game over
+            if (wrongGuesses >= 7) {
+                ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 40px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('MISSION FAILED', canvas.width / 2, canvas.height / 2);
+            }
+
+            // Draw "LAUNCH!" if won
+            if (gameActive === false && wrongGuesses < 7 && currentWord && !currentWord.split('').some(letter => !guessedLetters.includes(letter))) {
+                ctx.fillStyle = 'rgba(0, 255, 100, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00ff64';
+                ctx.font = 'bold 40px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('LAUNCH! 🚀', canvas.width / 2, canvas.height / 2);
+            }
+        }
+
+        function initKeyboard() {
+            const keyboard = document.getElementById('keyboard');
+            keyboard.innerHTML = '';
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            
+            letters.forEach(letter => {
+                const key = document.createElement('button');
+                key.className = 'key';
+                key.textContent = letter;
+                key.dataset.letter = letter;
+                key.addEventListener('click', () => guessLetter(letter));
+                keyboard.appendChild(key);
+            });
+        }
+
+        function selectDifficulty(diff) {
+            difficulty = diff;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.difficulty === diff);
+            });
+            document.getElementById('gameArea').classList.add('active');
+            startNewGame();
+        }
+
+        function startNewGame() {
+            if (!difficulty) return;
+            
+            const words = wordBank[difficulty];
+            const wordObj = words[Math.floor(Math.random() * words.length)];
+            currentWord = wordObj.word;
+            currentCategory = wordObj.category;
+            guessedLetters = [];
+            wrongGuesses = 0;
+            gameActive = true;
+            hintUsed = false;
+            
+            updateDisplay();
+            initKeyboard();
+            drawSpaceship();
+            document.getElementById('message').textContent = '';
+            document.getElementById('hintDisplay').textContent = '';
+            document.getElementById('hintBtn').disabled = false;
+            document.getElementById('hintBtn').style.opacity = '1';
+        }
+
+        function guessLetter(letter) {
+            if (!gameActive || guessedLetters.includes(letter)) return;
+            
+            guessedLetters.push(letter);
+            
+            const key = document.querySelector(`[data-letter="${letter}"]`);
+            
+            if (currentWord.includes(letter)) {
+                key.classList.add('correct');
+                playCorrectSound();
+            } else {
+                wrongGuesses++;
+                key.classList.add('wrong');
+                playWrongSound();
+            }
+            
+            key.classList.add('used');
+            updateDisplay();
+            checkGameState();
+        }
+
+        function updateDisplay() {
+            const display = currentWord.split('').map(letter => 
+                guessedLetters.includes(letter) ? letter : '_'
+            ).join(' ');
+            
+            document.getElementById('wordDisplay').textContent = display;
+            document.getElementById('wrongCount').textContent = `${wrongGuesses} / ${maxWrong}`;
+            document.getElementById('streakCount').textContent = streak;
+            drawSpaceship();
+        }
+
+        function checkGameState() {
+            const won = currentWord.split('').every(letter => guessedLetters.includes(letter));
+            const lost = wrongGuesses >= maxWrong;
+            
+            if (won) {
+                gameActive = false;
+                streak++;
+                document.getElementById('message').textContent = '🎉 MISSION SUCCESS! Spaceship Ready! 🎉';
+                document.getElementById('message').className = 'message win';
+                playVictorySound();
+                drawSpaceship();
+            } else if (lost) {
+                gameActive = false;
+                streak = 0;
+                document.getElementById('message').textContent = `💥 Mission Failed! The word was: ${currentWord}`;
+                document.getElementById('message').className = 'message lose';
+                drawSpaceship();
+            }
+            
+            document.getElementById('streakCount').textContent = streak;
+        }
+
+        // Event listeners
+        document.querySelectorAll('.difficulty-btn').forEach(btn => {
+            btn.addEventListener('click', () => selectDifficulty(btn.dataset.difficulty));
+        });
+
+        document.getElementById('newGameBtn').addEventListener('click', startNewGame);
+
+        document.getElementById('hintBtn').addEventListener('click', () => {
+            if (!gameActive || hintUsed) return;
+            hintUsed = true;
+            document.getElementById('hintDisplay').textContent = `📝 Category: ${currentCategory}`;
+            document.getElementById('hintBtn').disabled = true;
+            document.getElementById('hintBtn').style.opacity = '0.5';
+            playSound(600, 0.15);
+        });
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            const letter = e.key.toUpperCase();
+            if (/^[A-Z]$/.test(letter)) {
+                guessLetter(letter);
+            }
+        });
+
+        drawSpaceship();
+    </script>
+</body>
+</html>
